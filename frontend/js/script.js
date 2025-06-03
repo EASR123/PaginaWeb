@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showCreatePostFormButton = document.getElementById('show-create-post-form-button');
 
     // --- API Base URL ---
-    const API_BASE_URL = 'http://localhost:3000/api'; // Assuming backend runs on port 3000
+    const API_BASE_URL = 'https://paginaweb-a4os.onrender.com/api'; // Assuming backend runs on port 3000
 
     // --- State ---
     let isLoggedIn = false;
