@@ -21,11 +21,11 @@ app.use('/api/posts', postRoutes);
 // --- SERVIR FRONTEND ---
 // Asegúrate de que el frontend esté compilado (ej. `npm run build`) y copiado en la carpeta frontend/build o frontend/dist
 
-app.use(express.static(path.join(__dirname, '../frontend/build'))); // si usas React
+app.use(express.static(path.join(__dirname, '../frontend'))); // si usas React
 
 // Fallback para rutas que no son API (debe ir al final)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // Iniciar servidor
