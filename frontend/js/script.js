@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showCreatePostFormButton = document.getElementById('show-create-post-form-button');
 
     // --- API Base URL ---
-    const API_BASE_URL = 'https://paginaweb-backend.onrender.com/api'; 
+    export const API_BASE_URL = '/api';
     // Assuming backend runs on port 3000
 
     // --- State ---
