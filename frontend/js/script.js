@@ -1,41 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Elements ---
+    // --- Elementos del DOM ---
     const userStatusNav = document.getElementById('user-status');
     const authSection = document.getElementById('auth-section');
     const postsSection = document.getElementById('posts-section');
-    const postsListContainer = document.getElementById('posts-list'); // Added for posts
+    const postsListContainer = document.getElementById('posts-list');
     const userActionsSection = document.getElementById('user-actions');
     const createPostFormContainer = document.getElementById('create-post-form-container');
-    const createPostForm = document.getElementById('create-post-form'); // Added this selector
-    
-    // Forms and Buttons (will be used more in later subtasks)
+    const createPostForm = document.getElementById('create-post-form');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-    // const createPostForm = document.getElementById('create-post-form'); // Already declared above
     const logoutButton = document.getElementById('logout-button');
     const showCreatePostFormButton = document.getElementById('show-create-post-form-button');
 
-    // --- API Base URL ---
+    // --- URL Base de la API ---
     const API_BASE_URL = '/api';
-    // Assuming backend runs on port 3000
 
-    // --- State ---
+    // --- Estado ---
     let isLoggedIn = false;
-    let currentUser = null; // Example: { id: 1, username: 'testuser' }
+    let currentUser = null;
     let token = null;
 
-    // --- UI Update Functions ---
+    // --- Funciones para actualizar la UI ---
     function updateToken(newToken) {
         token = newToken;
         if (newToken) {
             localStorage.setItem('jwtToken', newToken);
-            // Decode and set current user when token is updated
             try {
                 const payload = JSON.parse(atob(newToken.split('.')[1]));
-                currentUser = payload.user || { username: 'User' }; 
+                currentUser = payload.user || { username: 'Usuario' };
             } catch (e) {
-                console.error("Error decoding token for username:", e);
-                currentUser = { username: 'User' }; // Fallback
+                console.error("Error decodificando el token:", e);
+                currentUser = { username: 'Usuario' };
             }
         } else {
             localStorage.removeItem('jwtToken');
@@ -44,15 +39,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateUserStatusUI() {
-        userStatusNav.innerHTML = ''; // Clear previous status
+        userStatusNav.innerHTML = '';
 
         if (isLoggedIn && currentUser) {
             const statusText = document.createElement('p');
-            statusText.textContent = `Logged in as ${currentUser.username}`;
+            statusText.textContent = `Conectado como ${currentUser.username}`;
             userStatusNav.appendChild(statusText);
         } else {
             const statusText = document.createElement('p');
-            statusText.textContent = 'You are not logged in.';
+            statusText.textContent = 'No has iniciado sesión.';
             userStatusNav.appendChild(statusText);
         }
     }
@@ -66,20 +61,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showUserDashboardView() {
         authSection.style.display = 'none';
-        postsSection.style.display = 'block'; // Show posts list
-        userActionsSection.style.display = 'block'; // Show logout, create post buttons
-        createPostFormContainer.style.display = 'none'; // Keep create form hidden initially
-        fetchAndDisplayPosts(); // Fetch posts when showing dashboard
+        postsSection.style.display = 'block';
+        userActionsSection.style.display = 'block';
+        createPostFormContainer.style.display = 'none';
+        fetchAndDisplayPosts();
     }
     
     function showCreatePostFormView() {
         if(isLoggedIn) {
             createPostFormContainer.style.display = 'block';
+            // Desplazarse suavemente al formulario
+            createPostFormContainer.scrollIntoView({ behavior: 'smooth' });
         }
     }
 
-    // --- Event Listeners (basic setup) ---
-
+    // --- Manejadores de Eventos ---
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -87,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = loginForm.password.value;
 
             if (!username || !password) {
-                alert('Please enter both username and password to log in.');
+                mostrarNotificacion('Por favor ingresa nombre de usuario y contraseña.', 'error');
                 return;
             }
 
@@ -104,22 +100,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (response.ok && data.token) {
                     isLoggedIn = true;
-                    updateToken(data.token); // This will also update currentUser
+                    updateToken(data.token);
                     loginForm.reset();
                     updateUserStatusUI();
                     showUserDashboardView();
+                    mostrarNotificacion('¡Inicio de sesión exitoso!', 'success');
                 } else {
                     isLoggedIn = false;
                     updateToken(null);
-                    alert(`Login failed: ${data.message || response.statusText}`);
-                    updateUserStatusUI(); // Ensure UI reflects logged-out state
-                    showAuthView();       // Ensure auth forms are shown
+                    mostrarNotificacion(`Error al iniciar sesión: ${data.message || response.statusText}`, 'error');
+                    updateUserStatusUI();
+                    showAuthView();
                 }
             } catch (error) {
-                console.error('Login error:', error);
+                console.error('Error en inicio de sesión:', error);
                 isLoggedIn = false;
                 updateToken(null);
-                alert('An error occurred during login. Please try again.');
+                mostrarNotificacion('Ocurrió un error al iniciar sesión. Por favor intenta nuevamente.', 'error');
                 updateUserStatusUI();
                 showAuthView();
             }
@@ -133,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = registerForm.password.value;
 
             if (!username || !password) {
-                alert('Please enter both username and password for registration.');
+                mostrarNotificacion('Por favor ingresa nombre de usuario y contraseña para registrarte.', 'error');
                 return;
             }
 
@@ -149,16 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert(`Registration successful for ${username}! You can now log in.`);
+                    mostrarNotificacion(`¡Registro exitoso para ${username}! Ahora puedes iniciar sesión.`, 'success');
                     registerForm.reset();
-                    // Optionally switch to login view or clear forms etc.
-                    // For now, just an alert. User can manually go to login.
+                    // Cambiar a la pestaña de login
+                    document.getElementById('login-form-container').scrollIntoView({ behavior: 'smooth' });
                 } else {
-                    alert(`Registration failed: ${data.message || response.statusText}`);
+                    mostrarNotificacion(`Error en el registro: ${data.message || response.statusText}`, 'error');
                 }
             } catch (error) {
-                console.error('Registration error:', error);
-                alert('An error occurred during registration. Please try again.');
+                console.error('Error en registro:', error);
+                mostrarNotificacion('Ocurrió un error durante el registro. Por favor intenta nuevamente.', 'error');
             }
         });
     }
@@ -166,34 +163,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutButton) {
         logoutButton.addEventListener('click', async () => {
             try {
-                // Optional: Call backend logout endpoint
-                // The actual logout (token invalidation) is handled by the client deleting the token
                 const response = await fetch(`${API_BASE_URL}/auth/logout`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        // 'Authorization': `Bearer ${token}` // If your logout endpoint requires auth
                     },
                 });
+                
                 if (!response.ok) {
-                    // Log error but proceed with client-side logout
-                    console.warn('Backend logout call failed or was not successful, but proceeding with client-side logout.');
+                    console.warn('La llamada al backend para cerrar sesión falló, pero continuamos con el cierre de sesión del cliente.');
                 }
             } catch (error) {
-                console.error('Error calling backend logout:', error);
-                // Proceed with client-side logout even if backend call fails
+                console.error('Error al cerrar sesión:', error);
             }
             
             isLoggedIn = false;
-            updateToken(null); // Clears token from state and localStorage, and clears currentUser
+            updateToken(null);
             updateUserStatusUI();
             showAuthView();
+            mostrarNotificacion('Has cerrado sesión correctamente.', 'info');
         });
     }
 
     if (showCreatePostFormButton) {
         showCreatePostFormButton.addEventListener('click', () => {
-            console.log('Show create post form button clicked');
             showCreatePostFormView();
         });
     }
@@ -205,14 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = createPostForm.content.value;
 
             if (!title.trim() || !content.trim()) {
-                alert('Please enter both title and content for your post.');
+                mostrarNotificacion('Por favor ingresa un título y contenido para tu publicación.', 'error');
                 return;
             }
 
-            const currentToken = localStorage.getItem('jwtToken'); // Use the global 'token' if preferred and always up-to-date
+            const currentToken = localStorage.getItem('jwtToken');
             if (!currentToken) {
-                alert('Authentication error. Please log in again.');
-                // Optionally redirect to login or show login form
+                mostrarNotificacion('Error de autenticación. Por favor inicia sesión nuevamente.', 'error');
                 showAuthView();
                 return;
             }
@@ -229,42 +221,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const responseData = await response.json();
 
-                if (response.ok) { // Typically 201 Created for POST
-                    alert('Post created successfully!');
+                if (response.ok) {
+                    mostrarNotificacion('¡Publicación creada con éxito!', 'success');
                     createPostForm.reset();
-                    createPostFormContainer.style.display = 'none'; // Hide form
-                    await fetchAndDisplayPosts(); // Refresh the posts list
+                    createPostFormContainer.style.display = 'none';
+                    await fetchAndDisplayPosts();
                 } else {
-                    alert(`Error creating post: ${responseData.message || response.statusText}`);
+                    mostrarNotificacion(`Error al crear publicación: ${responseData.message || response.statusText}`, 'error');
                 }
             } catch (error) {
-                console.error('Create post error:', error);
-                alert('An error occurred while creating the post. Please try again.');
+                console.error('Error al crear publicación:', error);
+                mostrarNotificacion('Ocurrió un error al crear la publicación. Por favor intenta nuevamente.', 'error');
             }
         });
     }
 
-
-    // --- Post Fetching and Display ---
+    // --- Funciones para manejar publicaciones ---
     async function fetchAndDisplayPosts() {
         if (!postsListContainer) {
-            console.error('Posts list container not found!');
+            console.error('Contenedor de publicaciones no encontrado!');
             return;
         }
-        postsListContainer.innerHTML = '<p>Loading posts...</p>'; // Clear and show loading
+        
+        // Mostrar esqueleto de carga
+        postsListContainer.innerHTML = `
+            <div class="skeleton-post">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-content"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+            <div class="skeleton-post">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-content"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+            <div class="skeleton-post">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-content"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+        `;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/posts`); // No auth needed for GET all posts
+            const response = await fetch(`${API_BASE_URL}/posts`);
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || `Error fetching posts: ${response.statusText}`);
+                throw new Error(errorData.message || `Error al obtener publicaciones: ${response.statusText}`);
             }
             const posts = await response.json();
 
-            postsListContainer.innerHTML = ''; // Clear loading message
+            postsListContainer.innerHTML = '';
 
             if (posts.length === 0) {
-                postsListContainer.innerHTML = '<p>No posts available yet. Be the first to create one!</p>';
+                postsListContainer.innerHTML = '<p class="no-posts">No hay publicaciones disponibles aún. ¡Sé el primero en crear una!</p>';
                 return;
             }
 
@@ -277,27 +286,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 title.textContent = post.title;
 
                 const contentSnippet = document.createElement('p');
-                // Display full content if short, or a snippet
                 contentSnippet.textContent = post.content.length > 150 
                     ? `${post.content.substring(0, 147)}...` 
                     : post.content;
                 
                 const authorInfo = document.createElement('small');
-                const postDate = new Date(post.created_at).toLocaleDateString('en-US', { 
+                const postDate = new Date(post.created_at).toLocaleDateString('es-ES', { 
                     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
                 });
-                authorInfo.textContent = `By ${post.username || 'Unknown author'} on ${postDate}`;
+                authorInfo.textContent = `Por ${post.username || 'Autor desconocido'} el ${postDate}`;
                 authorInfo.classList.add('post-meta');
 
                 const readMoreLink = document.createElement('a');
-                readMoreLink.href = '#'; // Or a specific link like `#/posts/${post.id}` for SPA routing
-                readMoreLink.textContent = 'Read more';
+                readMoreLink.href = '#';
+                readMoreLink.textContent = 'Leer más';
                 readMoreLink.classList.add('read-more-link');
                 readMoreLink.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log(`Read more clicked for post ID: ${post.id}`);
-                    alert(`Post Title: ${post.title}\n\nFull Content:\n${post.content}\n\nAuthor: ${post.username}`);
-                    // Future: Implement single post view (modal, new section, or page)
+                    mostrarModalPublicacion(post);
                 });
 
                 postElement.appendChild(title);
@@ -308,31 +314,227 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } catch (error) {
-            console.error('Failed to fetch posts:', error);
-            postsListContainer.innerHTML = `<p class="error-message">Could not load posts: ${error.message}</p>`;
+            console.error('Error al obtener publicaciones:', error);
+            postsListContainer.innerHTML = `<p class="error-message">No se pudieron cargar las publicaciones: ${error.message}</p>`;
         }
     }
 
-    // --- Initial UI Setup ---
+    // --- Funciones auxiliares ---
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        // Eliminar notificación anterior si existe
+        const notificacionAnterior = document.querySelector('.notificacion-flotante');
+        if (notificacionAnterior) {
+            notificacionAnterior.remove();
+        }
+
+        const notificacion = document.createElement('div');
+        notificacion.className = `notificacion-flotante notificacion-${tipo}`;
+        notificacion.textContent = mensaje;
+        
+        document.body.appendChild(notificacion);
+        
+        // Mostrar notificación
+        setTimeout(() => {
+            notificacion.classList.add('mostrar');
+        }, 10);
+        
+        // Ocultar después de 5 segundos
+        setTimeout(() => {
+            notificacion.classList.remove('mostrar');
+            setTimeout(() => {
+                notificacion.remove();
+            }, 300);
+        }, 5000);
+    }
+
+    function mostrarModalPublicacion(post) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-publicacion';
+        modal.innerHTML = `
+            <div class="modal-contenido">
+                <span class="cerrar-modal">&times;</span>
+                <h3>${post.title}</h3>
+                <div class="modal-meta">
+                    <small>Por ${post.username || 'Autor desconocido'} el ${new Date(post.created_at).toLocaleDateString('es-ES', { 
+                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    })}</small>
+                </div>
+                <div class="modal-contenido-texto">
+                    ${post.content.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Cerrar modal al hacer clic en la X
+        modal.querySelector('.cerrar-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        // Cerrar modal al hacer clic fuera del contenido
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // --- Inicialización ---
     function initializeUI() {
         const storedToken = localStorage.getItem('jwtToken');
         if (storedToken) {
-            // TODO: Add token validation step here or fetch user profile
-            // For now, assume token is valid if it exists
             token = storedToken;
             isLoggedIn = true;
-            // updateToken will set currentUser from the storedToken
             updateToken(storedToken); 
             isLoggedIn = true;
-            // No need to decode here again, updateToken does it.
             updateUserStatusUI();
-            showUserDashboardView(); // This will now call fetchAndDisplayPosts
+            showUserDashboardView();
         } else {
             isLoggedIn = false;
-            updateToken(null); // Ensures currentUser is null if no token
+            updateToken(null);
             updateUserStatusUI();
             showAuthView();
         }
+        
+        // Agregar estilos para notificaciones dinámicamente
+        const estiloNotificaciones = document.createElement('style');
+        estiloNotificaciones.textContent = `
+            .notificacion-flotante {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 5px;
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                transform: translateX(120%);
+                transition: transform 0.3s ease-out;
+                z-index: 1000;
+            }
+            
+            .notificacion-flotante.mostrar {
+                transform: translateX(0);
+            }
+            
+            .notificacion-error {
+                background-color: var(--danger-color);
+            }
+            
+            .notificacion-success {
+                background-color: var(--success-color);
+            }
+            
+            .notificacion-info {
+                background-color: var(--primary-color);
+            }
+            
+            /* Estilos para el modal */
+            .modal-publicacion {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1001;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .modal-publicacion.mostrar {
+                opacity: 1;
+            }
+            
+            .modal-contenido {
+                background-color: white;
+                padding: 2rem;
+                border-radius: var(--border-radius);
+                max-width: 800px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                position: relative;
+            }
+            
+            .cerrar-modal {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: var(--secondary-color);
+            }
+            
+            .cerrar-modal:hover {
+                color: var(--danger-color);
+            }
+            
+            .modal-contenido h3 {
+                margin-bottom: 1rem;
+                color: var(--text-color);
+            }
+            
+            .modal-meta {
+                margin-bottom: 1.5rem;
+                color: var(--secondary-color);
+            }
+            
+            .modal-contenido-texto {
+                line-height: 1.8;
+                white-space: pre-line;
+            }
+            
+            /* Esqueletos de carga */
+            .skeleton-post {
+                background: white;
+                padding: 1.5rem;
+                border-radius: var(--border-radius);
+                margin-bottom: 1.5rem;
+            }
+            
+            .skeleton-title {
+                height: 1.8rem;
+                width: 70%;
+                background: #e9ecef;
+                margin-bottom: 1rem;
+                border-radius: 4px;
+                animation: skeleton-loading 1.5s infinite ease-in-out;
+            }
+            
+            .skeleton-content {
+                height: 1rem;
+                width: 100%;
+                background: #e9ecef;
+                margin-bottom: 0.5rem;
+                border-radius: 4px;
+                animation: skeleton-loading 1.5s infinite ease-in-out;
+            }
+            
+            .skeleton-content:last-child {
+                width: 80%;
+            }
+            
+            .skeleton-meta {
+                height: 0.8rem;
+                width: 50%;
+                background: #e9ecef;
+                margin-top: 1rem;
+                border-radius: 4px;
+                animation: skeleton-loading 1.5s infinite ease-in-out;
+            }
+            
+            @keyframes skeleton-loading {
+                0% { opacity: 0.6; }
+                50% { opacity: 0.3; }
+                100% { opacity: 0.6; }
+            }
+        `;
+        document.head.appendChild(estiloNotificaciones);
     }
 
     initializeUI();
