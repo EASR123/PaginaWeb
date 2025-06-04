@@ -6,30 +6,32 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Rutas del backend
+// Importar rutas backend
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 
-// Middleware
+// Middleware para CORS
 app.use(cors());
+
+// Middleware para parsear JSON
 app.use(express.json());
 
-// Rutas API
+// Rutas del backend
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 
-// --- SERVIR FRONTEND ---
-// Asegúrate de que el frontend esté compilado (ej. `npm run build`) y copiado en la carpeta frontend/build o frontend/dist
+// Servir archivos estáticos desde la carpeta frontend (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, '../frontend')));
 
-app.use(express.static(path.join(__dirname, '../frontend'))); // si usas React
-
-// Fallback para rutas que no son API (debe ir al final)
+// Ruta catch-all para que cualquier petición que no coincida con las rutas anteriores
+// devuelva el index.html para que el frontend maneje las rutas (Single Page Application o web estática)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
 
-// Iniciar servidor
+// Levantar servidor
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+
 
