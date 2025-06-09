@@ -237,87 +237,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Funciones para manejar publicaciones ---
-    async function fetchAndDisplayPosts() {
-        if (!postsListContainer) {
-            console.error('Contenedor de publicaciones no encontrado!');
-            return;
-        }
-        
-        // Mostrar esqueleto de carga
-        postsListContainer.innerHTML = `
-            <div class="skeleton-post">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-content"></div>
-                <div class="skeleton-meta"></div>
-            </div>
-            <div class="skeleton-post">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-content"></div>
-                <div class="skeleton-meta"></div>
-            </div>
-            <div class="skeleton-post">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-content"></div>
-                <div class="skeleton-meta"></div>
-            </div>
-        `;
+  async function fetchAndDisplayPosts() {
+    if (!postsListContainer) {
+        console.error('Contenedor de publicaciones no encontrado!');
+        return;
+    }
+    
+    // Mostrar esqueleto de carga
+    postsListContainer.innerHTML = `
+        <div class="skeleton-post">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-content"></div>
+            <div class="skeleton-meta"></div>
+        </div>
+        <div class="skeleton-post">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-content"></div>
+            <div class="skeleton-meta"></div>
+        </div>
+        <div class="skeleton-post">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-content"></div>
+            <div class="skeleton-meta"></div>
+        </div>
+    `;
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/posts`);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Error al obtener publicaciones: ${response.statusText}`);
+    try {
+        // Simulamos la respuesta de la API con tus publicaciones
+        const today = new Date();
+        const posts = [
+            {
+                id: 1,
+                title: "Principio de Confidencialidad",
+                content: "Solo las personas autorizadas deben acceder a la información:\n\n- Cifrar datos sensibles con AES-256\n- Implementar autenticación multifactor (MFA)\n- Control estricto de permisos\n\nEjemplo: Historiales médicos solo accesibles por personal médico autorizado.",
+                username: "Sánchez Edgar",
+                created_at: today.toISOString()
+            },
+            {
+                id: 2,
+                title: "Importancia de la Integridad",
+                content: "La información debe mantenerse precisa y sin alteraciones no autorizadas:\n\n- Uso de hashing criptográfico (SHA-256)\n- Registros médicos electrónicos protegidos\n- Sistemas de versionado para cambios\n\nEjemplo: Alterar una dosis de medicamento podría ser fatal.",
+                username: "Sánchez Edgar",
+                created_at: today.toISOString()
+            },
+            {
+                id: 3,
+                title: "Disponibilidad 24/7",
+                content: "La información debe estar accesible cuando se necesita:\n\n- Servidores redundantes en e-Commerce\n- Planes de recuperación ante desastres\n- Bases de datos replicadas en bancos\n\n¡Un minuto de inactividad puede costar millones!",
+                username: "Sánchez Edgar",
+                created_at: today.toISOString()
+            },
+            {
+                id: 4,
+                title: "Triada CIA en la Práctica",
+                content: "Ejemplo en un hospital:\n\n1. Confidencialidad: Historias clínicas cifradas\n2. Integridad: Hashing en recetas médicas\n3. Disponibilidad: Generadores eléctricos\n\nSin CIA, los pacientes estarían en peligro.",
+                username: "Sánchez Edgar",
+                created_at: today.toISOString()
+            },
+            {
+                id: 5,
+                title: "Seguridad en Sistemas Bancarios",
+                content: "Implementación de la triada CIA:\n\n- Confidencialidad: Tokens de acceso\n- Integridad: Firmas digitales en transacciones\n- Disponibilidad: Clústeres de servidores\n\nCumplimiento de regulaciones financieras.",
+                username: "Sánchez Edgar",
+                created_at: today.toISOString()
             }
-            const posts = await response.json();
+        ];
 
-            postsListContainer.innerHTML = '';
+        postsListContainer.innerHTML = '';
 
-            if (posts.length === 0) {
-                postsListContainer.innerHTML = '<p class="no-posts">No hay publicaciones disponibles aún. ¡Sé el primero en crear una!</p>';
-                return;
-            }
+        posts.forEach(post => {
+            const postElement = document.createElement('article');
+            postElement.classList.add('post-entry');
+            postElement.setAttribute('data-post-id', post.id);
 
-            posts.forEach(post => {
-                const postElement = document.createElement('article');
-                postElement.classList.add('post-entry');
-                postElement.setAttribute('data-post-id', post.id);
+            const title = document.createElement('h4');
+            title.textContent = post.title;
 
-                const title = document.createElement('h4');
-                title.textContent = post.title;
+            const contentSnippet = document.createElement('p');
+            contentSnippet.textContent = post.content.length > 150 
+                ? `${post.content.substring(0, 147)}...` 
+                : post.content;
+            
+            const authorInfo = document.createElement('small');
+            const postDate = new Date(post.created_at).toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            authorInfo.textContent = `Por ${post.username} el ${postDate}`;
+            authorInfo.classList.add('post-meta');
 
-                const contentSnippet = document.createElement('p');
-                contentSnippet.textContent = post.content.length > 150 
-                    ? `${post.content.substring(0, 147)}...` 
-                    : post.content;
-                
-                const authorInfo = document.createElement('small');
-                const postDate = new Date(post.created_at).toLocaleDateString('es-ES', { 
-                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                });
-                authorInfo.textContent = `Por ${post.username || 'Autor desconocido'} el ${postDate}`;
-                authorInfo.classList.add('post-meta');
-
-                const readMoreLink = document.createElement('a');
-                readMoreLink.href = '#';
-                readMoreLink.textContent = 'Leer más';
-                readMoreLink.classList.add('read-more-link');
-                readMoreLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    mostrarModalPublicacion(post);
-                });
-
-                postElement.appendChild(title);
-                postElement.appendChild(contentSnippet);
-                postElement.appendChild(authorInfo);
-                postElement.appendChild(readMoreLink);
-                postsListContainer.appendChild(postElement);
+            const readMoreLink = document.createElement('a');
+            readMoreLink.href = '#';
+            readMoreLink.textContent = 'Leer más';
+            readMoreLink.classList.add('read-more-link');
+            readMoreLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                mostrarModalPublicacion(post);
             });
 
-        } catch (error) {
-            console.error('Error al obtener publicaciones:', error);
-            postsListContainer.innerHTML = `<p class="error-message">No se pudieron cargar las publicaciones: ${error.message}</p>`;
-        }
+            postElement.appendChild(title);
+            postElement.appendChild(contentSnippet);
+            postElement.appendChild(authorInfo);
+            postElement.appendChild(readMoreLink);
+            postsListContainer.appendChild(postElement);
+        });
+
+    } catch (error) {
+        console.error('Error al obtener publicaciones:', error);
+        postsListContainer.innerHTML = `
+            <p class="error-message">
+                No se pudieron cargar las publicaciones. Mostrando datos de ejemplo...
+            </p>
+        `;
+        
+        // Forzar la visualización de las publicaciones aunque falle la API
+        fetchAndDisplayPosts();
     }
+}
 
     // --- Funciones auxiliares ---
     function mostrarNotificacion(mensaje, tipo = 'info') {
