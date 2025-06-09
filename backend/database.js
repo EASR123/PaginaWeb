@@ -1,5 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
-const { Octokit } = require('octokit');
+const { Octokit } = require('@octokit/rest');
 const fs = require('fs');
 const path = require('path');
 
