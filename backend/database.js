@@ -40,5 +40,20 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
         });
     }
 });
+const { Octokit } = require('octokit');
+
+async function backupToGitHub() {
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  
+  const content = fs.readFileSync(DBSOURCE, 'base64');
+  
+  await octokit.rest.gists.create({
+    files: {
+      [DB_KEY]: { content }
+    },
+    public: false,
+    description: 'Backup de la base de datos'
+  });
+}
 
 module.exports = db;
