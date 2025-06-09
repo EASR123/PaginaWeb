@@ -263,47 +263,43 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     try {
-        // Simulamos la respuesta de la API con tus publicaciones
-        const today = new Date();
-        const posts = [
-            {
-                id: 1,
-                title: "Principio de Confidencialidad",
-                content: "Solo las personas autorizadas deben acceder a la información:\n\n- Cifrar datos sensibles con AES-256\n- Implementar autenticación multifactor (MFA)\n- Control estricto de permisos\n\nEjemplo: Historiales médicos solo accesibles por personal médico autorizado.",
-                username: "Sánchez Edgar",
-                created_at: today.toISOString()
-            },
-            {
-                id: 2,
-                title: "Importancia de la Integridad",
-                content: "La información debe mantenerse precisa y sin alteraciones no autorizadas:\n\n- Uso de hashing criptográfico (SHA-256)\n- Registros médicos electrónicos protegidos\n- Sistemas de versionado para cambios\n\nEjemplo: Alterar una dosis de medicamento podría ser fatal.",
-                username: "Sánchez Edgar",
-                created_at: today.toISOString()
-            },
-            {
-                id: 3,
-                title: "Disponibilidad 24/7",
-                content: "La información debe estar accesible cuando se necesita:\n\n- Servidores redundantes en e-Commerce\n- Planes de recuperación ante desastres\n- Bases de datos replicadas en bancos\n\n¡Un minuto de inactividad puede costar millones!",
-                username: "Sánchez Edgar",
-                created_at: today.toISOString()
-            },
-            {
-                id: 4,
-                title: "Triada CIA en la Práctica",
-                content: "Ejemplo en un hospital:\n\n1. Confidencialidad: Historias clínicas cifradas\n2. Integridad: Hashing en recetas médicas\n3. Disponibilidad: Generadores eléctricos\n\nSin CIA, los pacientes estarían en peligro.",
-                username: "Sánchez Edgar",
-                created_at: today.toISOString()
-            },
-            {
-                id: 5,
-                title: "Seguridad en Sistemas Bancarios",
-                content: "Implementación de la triada CIA:\n\n- Confidencialidad: Tokens de acceso\n- Integridad: Firmas digitales en transacciones\n- Disponibilidad: Clústeres de servidores\n\nCumplimiento de regulaciones financieras.",
-                username: "Sánchez Edgar",
-                created_at: today.toISOString()
-            }
-        ];
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+            throw new Error('No hay token de autenticación');
+        }
 
+        const response = await fetch(`${API_BASE_URL}/posts`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al obtener publicaciones');
+        }
+
+        const posts = await response.json();
         postsListContainer.innerHTML = '';
+
+        if (posts.length === 0) {
+            postsListContainer.innerHTML = `
+                <div class="no-posts">
+                    <p>No hay publicaciones aún</p>
+                    ${isLoggedIn ? '<button id="create-first-post" class="btn-primary">Crear primera publicación</button>' : ''}
+                </div>
+            `;
+            
+            if (isLoggedIn) {
+                document.getElementById('create-first-post').addEventListener('click', () => {
+                    showCreatePostFormView();
+                });
+            }
+            return;
+        }
+
+        // Ordenar posts por fecha (más recientes primero)
+        posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         posts.forEach(post => {
             const postElement = document.createElement('article');
@@ -314,9 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
             title.textContent = post.title;
 
             const contentSnippet = document.createElement('p');
-            contentSnippet.textContent = post.content.length > 150 
-                ? `${post.content.substring(0, 147)}...` 
-                : post.content;
+            const plainTextContent = post.content.replace(/<[^>]*>/g, ''); // Eliminar HTML tags
+            contentSnippet.textContent = plainTextContent.length > 150 
+                ? `${plainTextContent.substring(0, 147)}...` 
+                : plainTextContent;
             
             const authorInfo = document.createElement('small');
             const postDate = new Date(post.created_at).toLocaleDateString('es-ES', { 
@@ -326,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hour: '2-digit', 
                 minute: '2-digit' 
             });
-            authorInfo.textContent = `Por ${post.username} el ${postDate}`;
+            authorInfo.textContent = `Por ${post.username || 'Autor desconocido'} el ${postDate}`;
             authorInfo.classList.add('post-meta');
 
             const readMoreLink = document.createElement('a');
@@ -338,6 +335,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 mostrarModalPublicacion(post);
             });
 
+            // Botones de acción (solo para el autor o admin)
+            if (isLoggedIn && (currentUser.username === post.username || currentUser.role === 'admin')) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('post-actions');
+                
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Editar';
+                editBtn.classList.add('btn-edit');
+                editBtn.addEventListener('click', () => editPost(post.id));
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Eliminar';
+                deleteBtn.classList.add('btn-delete');
+                deleteBtn.addEventListener('click', () => deletePost(post.id));
+                
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(deleteBtn);
+                postElement.appendChild(actionsDiv);
+            }
+
             postElement.appendChild(title);
             postElement.appendChild(contentSnippet);
             postElement.appendChild(authorInfo);
@@ -347,17 +364,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } catch (error) {
         console.error('Error al obtener publicaciones:', error);
-        postsListContainer.innerHTML = `
-            <p class="error-message">
-                No se pudieron cargar las publicaciones. Mostrando datos de ejemplo...
-            </p>
-        `;
         
-        // Forzar la visualización de las publicaciones aunque falle la API
-        fetchAndDisplayPosts();
+        // Mostrar datos de ejemplo si hay error (solo en desarrollo)
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('Mostrando datos de ejemplo por error en la API');
+            const today = new Date();
+            const examplePosts = [
+                {
+                    id: 1,
+                    title: "Ejemplo de publicación",
+                    content: "Esta es una publicación de ejemplo porque la API no respondió correctamente.",
+                    username: "Sistema",
+                    created_at: today.toISOString()
+                }
+            ];
+            
+            postsListContainer.innerHTML = '';
+            examplePosts.forEach(post => {
+                // Usar el mismo código de renderizado de posts
+                const postElement = document.createElement('article');
+                postElement.classList.add('post-entry');
+                // ... (resto del código de renderizado)
+                postsListContainer.appendChild(postElement);
+            });
+        } else {
+            postsListContainer.innerHTML = `
+                <div class="error-message">
+                    <p>Error al cargar publicaciones: ${error.message}</p>
+                    <button id="retry-loading" class="btn-primary">Reintentar</button>
+                </div>
+            `;
+            
+            document.getElementById('retry-loading').addEventListener('click', fetchAndDisplayPosts);
+        }
     }
 }
 
+// Funciones auxiliares para editar/eliminar
+async function editPost(postId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+            }
+        });
+        const post = await response.json();
+        
+        // Llenar formulario de edición
+        document.getElementById('edit-post-title').value = post.title;
+        document.getElementById('edit-post-content').value = post.content;
+        document.getElementById('edit-post-id').value = post.id;
+        
+        // Mostrar modal de edición
+        document.getElementById('edit-post-modal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error al cargar post para editar:', error);
+        mostrarNotificacion('Error al cargar publicación para editar', 'error');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('¿Estás seguro de eliminar esta publicación?')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Error al eliminar');
+        
+        mostrarNotificacion('Publicación eliminada', 'success');
+        await fetchAndDisplayPosts();
+    } catch (error) {
+        console.error('Error al eliminar post:', error);
+        mostrarNotificacion('Error al eliminar publicación', 'error');
+    }
+}
     // --- Funciones auxiliares ---
     function mostrarNotificacion(mensaje, tipo = 'info') {
         // Eliminar notificación anterior si existe
